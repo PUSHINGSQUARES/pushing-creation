@@ -1,5 +1,7 @@
 # PUSHING CREATION_
 
+![Sage-green Lamborghini Huracán Performante on a wet British B-road, late afternoon overcast with motion blur. Generated through the pushing-creation methodology.](docs/hero.png)
+
 Cinematic prompt methodology you can install into Claude Code. Author **style packs** and **storyboards** that produce professional-grade AI-generated images and video, across any provider, any tool.
 
 > Stop prompting. Start defining outcomes.
