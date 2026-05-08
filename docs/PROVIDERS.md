@@ -72,7 +72,7 @@ pushing-creation supports direct generation through these providers.
 - **Image:** Not supported. Use seedream for images.
 - **Auth:** Same Volcano Engine `access_key:secret_key` as Seedream
 - **Key format:** `AKXXXXXXXX:secretXXXXXX`
-- **Where to get:** [console.volcengine.com](https://www.byteplus.com/en)
+- **Where to get:** (https://www.byteplus.com/en)
 - **Quirk:** Seedance falls back to the Seedream Keychain entry when no separate seedance entry is set, since both run on Volcengine ARK with shared credentials. If you only have one Volcengine key, storing it under `pushing-creation:seedream` covers both providers.
 
 ### Imagen
