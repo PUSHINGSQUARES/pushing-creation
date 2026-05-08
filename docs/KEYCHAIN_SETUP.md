@@ -59,26 +59,26 @@ Get your key at [klingai.com](https://klingai.com) under API settings.
 
 ### Seedream (Bytedance)
 
-Seedream uses Volcano Engine HMAC signing. The key format is `access_key:secret_key`.
+Seedream uses  Model Ark. The key format is `API_key`.
 
 ```sh
 security add-generic-password -U \
   -s "pushing-creation:seedream" \
   -a "$USER" \
-  -w "[VOLCANO_ACCESS_KEY]:[VOLCANO_SECRET_KEY]"
+  -w "[SECRET_KEY]"
 ```
 
-Get credentials at [console.volcengine.com](https://console.volcengine.com) under Access Control.
+Get credentials at (https://www.byteplus.com/en) under Access Control.
 
 ### Seedance (Bytedance)
 
-Same Volcano Engine credentials as Seedream. You can use the same access/secret key pair if your account has both services enabled.
+Same Volcano Engine credentials as Seedream. You can use the same key if your account has both services enabled.
 
 ```sh
 security add-generic-password -U \
   -s "pushing-creation:seedance" \
   -a "$USER" \
-  -w "[VOLCANO_ACCESS_KEY]:[VOLCANO_SECRET_KEY]"
+  -w "[VOLCANO_ACCESS_KEY]:[APIT_KEY]"
 ```
 
 ### Imagen (Google Vertex AI)
