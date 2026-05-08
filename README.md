@@ -6,6 +6,13 @@ Cinematic prompt methodology you can install into Claude Code. Author **style pa
 
 > Stop prompting. Start defining outcomes.
 
+## Generate directly from Claude (v0.3+)
+
+Install pushing-creation, add your provider keys to Keychain once, then `/frames-gen <shot>` inside any Claude Code session writes the image to disk. Claude never sees your keys. Seven providers supported.
+
+See [docs/KEYCHAIN_SETUP.md](docs/KEYCHAIN_SETUP.md) for setup instructions.
+
+
 ## Install (Claude Code)
 
 ```

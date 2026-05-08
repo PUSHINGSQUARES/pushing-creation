@@ -1,0 +1,16 @@
+# Generation outputs (regenerable, large, may contain identifying refs)
+projects/*/renders/
+test-output/
+
+# Local secrets (must never be committed)
+*.env
+.env.*
+secrets.json
+secrets.yaml
+credentials.json
+keys.txt
+
+# Python build artefacts
+__pycache__/
+*.pyc
+.pytest_cache/

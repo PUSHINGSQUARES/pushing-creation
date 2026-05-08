@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""Generate an image or video using a provider, reading API keys from macOS Keychain."""
+import argparse
+import os
+import sys
+from pathlib import Path
+
+# Allow imports from lib/ relative to this file
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+
+from lib import keychain, scrub as scrub_mod
+from lib.storyboard import parse as parse_storyboard, get_by_id, get_by_number
+from lib.style import parse as parse_style, resolve as resolve_style
+from lib.providers import get_provider
+from lib.providers.base import GenRequest
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="frames-gen",
+        description="Generate an image or video using a provider via macOS Keychain keys.",
+    )
+    p.add_argument("--provider", required=True, help="Provider name (gemini, openai, kling, ...)")
+    p.add_argument("--kind", required=True, choices=["image", "video"], help="Generation kind")
+    p.add_argument("--shot-id", help="Shot ID from storyboard.md")
+    p.add_argument("--shot-n", type=int, help="1-indexed shot number from storyboard.md")
+    p.add_argument("--prompt-file", help="Read prompt from a file")
+    p.add_argument("--prompt", help="Inline prompt string")
+    p.add_argument("--style-file", default="style.md", help="Path to style.md (default: ./style.md)")
+    p.add_argument("--storyboard-file", default="storyboard.md", help="Path to storyboard.md")
+    p.add_argument("--refs-dir", default="refs", help="Directory containing reference images")
+    p.add_argument("--out", required=True, help="Output file path")
+    p.add_argument("--aspect", default="16:9", help="Aspect ratio (default: 16:9)")
+    p.add_argument("--dry-run", action="store_true", help="Print resolved request without calling provider")
+    return p
+
+
+def resolve_prompt(args, style_file: Path, storyboard_file: Path, refs_dir: Path):
+    """Return (prompt, negative_prompt, refs, aspect)."""
+    style_blocks = {}
+    if style_file.exists():
+        from lib.style import parse as parse_style
+        style_blocks = parse_style(style_file)
+
+    # Prompt from shot lookup
+    if args.shot_id or args.shot_n is not None:
+        if not storyboard_file.exists():
+            print(f"error: storyboard file not found: {storyboard_file}", file=sys.stderr)
+            sys.exit(4)
+        shots = parse_storyboard(storyboard_file)
+        shot = (get_by_id(shots, args.shot_id) if args.shot_id
+                else get_by_number(shots, args.shot_n))
+        if shot is None:
+            ref = args.shot_id or f"#{args.shot_n}"
+            print(f"error: shot {ref!r} not found in {storyboard_file}", file=sys.stderr)
+            sys.exit(4)
+        style_frag = resolve_style(shot.style, style_blocks) if shot.style else ""
+        neg_frag = resolve_style(shot.neg, style_blocks) if shot.neg else None
+        prompt = shot.action
+        if style_frag:
+            prompt = f"{prompt}, {style_frag}"
+        aspect = shot.aspect or args.aspect
+        ref_paths = [refs_dir / r for r in shot.refs if r]
+        return prompt, neg_frag, ref_paths, aspect
+
+    # Explicit prompt
+    if args.prompt_file:
+        pf = Path(args.prompt_file)
+        if not pf.exists():
+            print(f"error: prompt file not found: {pf}", file=sys.stderr)
+            sys.exit(4)
+        return pf.read_text().strip(), None, [], args.aspect
+
+    if args.prompt:
+        return args.prompt, None, [], args.aspect
+
+    print("error: one of --shot-id, --shot-n, --prompt, or --prompt-file is required", file=sys.stderr)
+    sys.exit(4)
+
+
+def main():
+    parser = build_arg_parser()
+    args = parser.parse_args()
+
+    style_file = Path(args.style_file)
+    storyboard_file = Path(args.storyboard_file)
+    refs_dir = Path(args.refs_dir)
+    out_path = Path(args.out)
+
+    prompt, negative_prompt, refs, aspect = resolve_prompt(args, style_file, storyboard_file, refs_dir)
+
+    if args.dry_run:
+        print("=== DRY RUN ===")
+        print(f"provider:  {args.provider}")
+        print(f"kind:      {args.kind}")
+        print(f"aspect:    {aspect}")
+        print(f"out:       {out_path}")
+        print(f"prompt:    {prompt}")
+        if negative_prompt:
+            print(f"negative:  {negative_prompt}")
+        if refs:
+            print(f"refs:      {[str(r) for r in refs]}")
+        return
+
+    # Key lookup
+    service = f"pushing-creation:{args.provider}"
+    api_key = keychain.get(service)
+    if api_key is None:
+        print(
+            f"error: no key found in Keychain for '{service}'\n"
+            f"Add it with:\n"
+            f"  security add-generic-password -U -s \"{service}\" -a \"$USER\" -w \"<your-key>\"",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    try:
+        provider = get_provider(args.provider)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        sys.exit(4)
+
+    req = GenRequest(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        refs=refs,
+        aspect_ratio=aspect,
+        out_path=out_path,
+        extras={},
+    )
+
+    try:
+        if args.kind == "image":
+            if not provider.supports_image:
+                print(f"error: {args.provider} does not support image generation", file=sys.stderr)
+                sys.exit(1)
+            result = provider.generate_image(req, api_key)
+        else:
+            if not provider.supports_video:
+                print(f"error: {args.provider} does not support video generation", file=sys.stderr)
+                sys.exit(1)
+            result = provider.generate_video(req, api_key)
+    except NotImplementedError as e:
+        print(f"error: {scrub_mod.scrub(str(e))}", file=sys.stderr)
+        sys.exit(1)
+    except RuntimeError as e:
+        print(f"error: {scrub_mod.scrub(str(e))}", file=sys.stderr)
+        sys.exit(3)
+    except Exception as e:
+        print(f"error: {scrub_mod.scrub(str(e))}", file=sys.stderr)
+        sys.exit(1)
+
+    print(result.out_path.resolve())
+
+
+if __name__ == "__main__":
+    main()

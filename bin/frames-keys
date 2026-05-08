@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Manage API keys in macOS Keychain for pushing-creation providers."""
+import argparse
+import getpass
+import sys
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+
+from lib import keychain
+from lib import scrub as scrub_mod
+from lib.providers import REGISTRY, get_provider
+
+_SERVICE_PREFIX = "pushing-creation:"
+
+
+def cmd_add(provider: str):
+    service = f"{_SERVICE_PREFIX}{provider}"
+    print(f"Adding key for {provider} ({service})")
+    print("Paste your API key and press Enter (input is hidden):")
+    value = getpass.getpass(prompt="")
+    if not value.strip():
+        print("error: empty key — aborted", file=sys.stderr)
+        sys.exit(1)
+    try:
+        keychain.set(service, value.strip())
+    except Exception as e:
+        print(f"error: {scrub_mod.scrub(str(e))}", file=sys.stderr)
+        sys.exit(1)
+    print(f"[ok] {provider} — key stored in Keychain as '{service}'")
+    print("Verify with: frames-keys test " + provider)
+
+
+def cmd_list():
+    services = keychain.list_services(_SERVICE_PREFIX)
+    if not services:
+        print("No pushing-creation keys found in Keychain.")
+        print("Add one with: frames-keys add <provider>")
+        return
+    print("Keychain entries (service names only — no values shown):")
+    for svc in services:
+        name = svc.removeprefix(_SERVICE_PREFIX)
+        tag = "(not in provider registry)" if name not in REGISTRY else ""
+        print(f"  {svc}  {tag}")
+
+
+def cmd_test(provider: str):
+    service = f"{_SERVICE_PREFIX}{provider}"
+    if not keychain.has(service):
+        print(f"[fail] {provider}: no key in Keychain for '{service}'")
+        print(f"  Add with: frames-keys add {provider}")
+        sys.exit(1)
+
+    try:
+        p = get_provider(provider)
+    except ValueError as e:
+        print(f"[fail] {provider}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    api_key = keychain.get(service)
+    if api_key is None:
+        print(f"[fail] {provider}: key read returned empty", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        ok = p.ping(api_key)
+    except NotImplementedError:
+        print(f"[skip] {provider}: ping not implemented for this provider")
+        return
+    except Exception as e:
+        print(f"[fail] {provider}: {scrub_mod.scrub(str(e))}")
+        sys.exit(1)
+
+    if ok:
+        print(f"[ok] {provider}")
+    else:
+        print(f"[fail] {provider}: key rejected or unreachable")
+        sys.exit(1)
+
+
+def cmd_remove(provider: str):
+    service = f"{_SERVICE_PREFIX}{provider}"
+    if not keychain.has(service):
+        print(f"No key found for '{service}' — nothing to remove.")
+        return
+    import subprocess
+    result = subprocess.run(
+        ["security", "delete-generic-password", "-s", service],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode == 0:
+        print(f"[ok] Removed '{service}' from Keychain.")
+    else:
+        err = result.stderr.decode(errors="replace").strip()
+        print(f"error: {scrub_mod.scrub(err)}", file=sys.stderr)
+        sys.exit(1)
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="frames-keys",
+        description="Manage pushing-creation provider API keys in macOS Keychain.",
+    )
+    sub = p.add_subparsers(dest="command")
+
+    add_p = sub.add_parser("add", help="Add or update a provider key")
+    add_p.add_argument("provider", help="Provider name (gemini, openai, kling, ...)")
+
+    sub.add_parser("list", help="List all stored pushing-creation services")
+
+    test_p = sub.add_parser("test", help="Test a provider key with a live ping")
+    test_p.add_argument("provider", help="Provider name")
+
+    rm_p = sub.add_parser("remove", help="Remove a provider key from Keychain")
+    rm_p.add_argument("provider", help="Provider name")
+
+    return p
+
+
+def main():
+    parser = build_arg_parser()
+    args = parser.parse_args()
+
+    if args.command == "add":
+        cmd_add(args.provider)
+    elif args.command == "list":
+        cmd_list()
+    elif args.command == "test":
+        cmd_test(args.provider)
+    elif args.command == "remove":
+        cmd_remove(args.provider)
+    else:
+        parser.print_help()
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

@@ -92,6 +92,37 @@ When helping author `storyboard.md`:
 - `/frames-brainstorm` runs a vision-grounded DP interview that writes `style.md` live from your reference images.
 - `/frames-shotlist` generates a full storyboard from style + refs + concept.
 - `/frames-shot <N>` authors or refines a single shot in the storyboard.
+- `/frames-gen <N>` generates an image or video for shot N, reading API keys from macOS Keychain.
+- `/frames-keys` manages provider API keys stored in Keychain (add, list, test, remove).
+
+## Direct generation (v0.3+)
+
+You can generate images and video directly from Claude Code without leaving the session.
+
+**How it works:** `bin/frames-gen` reads the shot from `storyboard.md`, expands style blocks from `style.md`, reads the provider API key from macOS Keychain at call time, and calls the provider. Claude never sees the key value. The output path is the only thing printed to stdout.
+
+**Setup:** Add provider keys once with `bin/frames-keys add <provider>` or via `/frames-keys`. See `docs/KEYCHAIN_SETUP.md` for the exact commands per provider.
+
+**Supported providers:**
+
+| Provider | Image | Video |
+|----------|-------|-------|
+| gemini | yes | yes (Veo 2) |
+| openai | yes | no |
+| openrouter | yes | no |
+| kling | no | yes |
+| seedream | yes | no |
+| seedance | no | yes |
+| imagen | yes | no |
+
+**Usage pattern:**
+
+```
+/frames-keys add gemini       # once per provider
+/frames-gen 1                  # generates shot 1 using the provider in the storyboard
+```
+
+For providers that need two credentials (Seedream, Seedance), store them as `access_key:secret_key` (colon-separated) in a single Keychain entry.
 
 ## Relationship to PUSHING FRAMES
 
