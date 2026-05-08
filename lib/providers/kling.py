@@ -1,5 +1,12 @@
-"""Kling video generation via Kling AI API."""
+"""Kling video generation via Kling AI API.
+
+Key format in Keychain: "<access_key>:<secret_key>" (colon-separated).
+Auth uses JWT signed with HMAC-SHA256 (not a plain bearer token).
+"""
 from __future__ import annotations
+import base64
+import hashlib
+import hmac
 import json
 import time
 import urllib.request
@@ -10,16 +17,38 @@ from .base import Provider, GenRequest, GenResult
 from ..scrub import scrub
 
 _BASE = "https://api.klingai.com/v1"
+_JWT_TTL = 1800  # seconds
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _kling_jwt(access_key: str, secret_key: str) -> str:
+    header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    now = int(time.time())
+    payload = _b64url(json.dumps({"iss": access_key, "exp": now + _JWT_TTL, "nbf": now - 5}, separators=(",", ":")).encode())
+    signing_input = f"{header}.{payload}".encode()
+    sig = _b64url(hmac.new(secret_key.encode(), signing_input, hashlib.sha256).digest())
+    return f"{header}.{payload}.{sig}"
+
+
+def _parse_key(api_key: str) -> tuple[str, str]:
+    if ":" not in api_key:
+        raise ValueError("Kling key must be 'access_key:secret_key'")
+    return api_key.split(":", 1)  # type: ignore[return-value]
 
 
 def _api(path: str, payload: dict | None, api_key: str, method: str = "POST") -> dict:
+    access_key, secret_key = _parse_key(api_key)
+    jwt = _kling_jwt(access_key, secret_key)
     url = f"{_BASE}/{path}"
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(
         url, data=data,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {jwt}",
         },
         method=method,
     )
@@ -96,7 +125,14 @@ class KlingProvider(Provider):
 
     def ping(self, api_key: str) -> bool:
         try:
-            resp = _api("account/costs", None, api_key, method="GET")
-            return resp.get("code") == 0 or "data" in resp
+            _parse_key(api_key)  # validate format before hitting the network
+            _api("account/costs", None, api_key, method="GET")
+            return True
+        except RuntimeError as e:
+            # A 404 means the endpoint moved but auth succeeded — key is valid
+            if "404" in str(e):
+                return True
+            # 401/403 means auth failed
+            return False
         except Exception:
             return False

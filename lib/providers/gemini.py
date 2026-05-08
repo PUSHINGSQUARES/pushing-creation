@@ -11,7 +11,7 @@ from .base import Provider, GenRequest, GenResult
 from ..scrub import scrub
 
 _BASE = "https://generativelanguage.googleapis.com/v1beta"
-_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation"
+_IMAGE_MODEL = "gemini-2.5-flash-image"
 _VIDEO_MODEL = "veo-2.0-generate-001"
 
 
@@ -43,15 +43,13 @@ class GeminiProvider(Provider):
             "4:3": "4:3", "3:4": "3:4",
         }
         aspect = ar_map.get(req.aspect_ratio, "16:9")
-        payload = {
-            "contents": [{"parts": [{"text": req.prompt}]}],
-            "generationConfig": {
-                "responseModalities": ["IMAGE"],
-                "imagenConfig": {"aspectRatio": aspect},
-            },
-        }
+        prompt = req.prompt
         if req.negative_prompt:
-            payload["generationConfig"]["imagenConfig"]["negativePrompt"] = req.negative_prompt
+            prompt = f"{prompt}. Avoid: {req.negative_prompt}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"responseModalities": ["IMAGE", "TEXT"]},
+        }
 
         resp = _api(f"models/{_IMAGE_MODEL}:generateContent", payload, api_key)
         # Extract inline image data

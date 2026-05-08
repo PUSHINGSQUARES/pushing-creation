@@ -59,6 +59,9 @@ def cmd_test(provider: str):
         sys.exit(1)
 
     api_key = keychain.get(service)
+    # seedance shares Volcengine credentials with seedream
+    if api_key is None and provider == "seedance":
+        api_key = keychain.get("pushing-creation:seedream")
     if api_key is None:
         print(f"[fail] {provider}: key read returned empty", file=sys.stderr)
         sys.exit(1)

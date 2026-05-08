@@ -6,22 +6,20 @@ pushing-creation supports direct generation through these providers.
 
 | Provider | Image | Video | Verified | Notes |
 |----------|-------|-------|----------|-------|
-| gemini | yes | yes | scaffolded | Gemini Flash image + Veo 2 video via Google AI Studio |
-| openai | yes | no | scaffolded | GPT-image-1; no video support |
-| openrouter | yes | no | scaffolded | Pass-through to Flux 1.1 Pro and others |
-| kling | no | yes | scaffolded | Kling v2 Master video; no image support |
-| seedream | yes | no | scaffolded | Bytedance Seedream v3 via Volcano Engine |
-| seedance | no | yes | scaffolded | Bytedance Seedance v1 Lite via Volcano Engine |
-| imagen | yes | no | scaffolded | Google Imagen 006 via Vertex AI |
-
-*Verification status will be updated after real-test gate runs with live Keychain entries.*
+| gemini | yes | yes | ✓ verified 2026-05-08 (image) | Gemini 2.5 Flash image via Google AI Studio |
+| openai | yes | no | ✓ verified 2026-05-08 | GPT-image-1; no video support |
+| openrouter | yes | no | scaffolded, unverified — model availability varies by plan | Pass-through; default model requires account with image tier |
+| kling | no | yes | ✓ verified 2026-05-08 | Kling v2 Master video; JWT signed with HMAC-SHA256 |
+| seedream | yes | no | scaffolded, unverified — ARK API key format mismatch | Stored key is ARK UUID; provider expects Volcengine HMAC. Deferred to v0.3.x. |
+| seedance | no | yes | scaffolded, unverified — ARK API key format mismatch | Same as seedream; deferred to v0.3.x. |
+| imagen | yes | no | scaffolded, unverified — requires Vertex AI auth, deferred to v0.3.x | Google Imagen 006 via Vertex AI |
 
 ## Provider details
 
 ### Gemini
 
 - **Keychain service:** `pushing-creation:gemini`
-- **Image model:** `gemini-2.0-flash-preview-image-generation`
+- **Image model:** `gemini-2.5-flash-image`
 - **Video model:** `veo-2.0-generate-001`
 - **Cost:** Image approximately $0.002 per image; Veo video approximately $0.05-0.30 per second
 - **Auth:** Google AI Studio API key (`AIza...`)
@@ -52,9 +50,10 @@ pushing-creation supports direct generation through these providers.
 - **Video model:** `kling-v2-master`
 - **Image:** Not supported
 - **Cost:** Approximately $0.14 per 5-second clip (varies by tier)
-- **Auth:** Kling API bearer token
+- **Auth:** Kling AccessKey + SecretKey; signed as HMAC-SHA256 JWT per call
+- **Key format:** `AKXXXXXXXX:secretXXXXXX` (colon-separated access_key:secret_key)
 - **Where to get:** [klingai.com](https://klingai.com) under API settings
-- **Quirk:** Generation is async; CLI polls until complete (up to 10 minutes)
+- **Quirk:** Generation is async; CLI polls until complete (up to 10 minutes). JWT is generated fresh each request using stdlib `hmac`/`hashlib` — no third-party dependency.
 
 ### Seedream
 
@@ -74,9 +73,13 @@ pushing-creation supports direct generation through these providers.
 - **Auth:** Same Volcano Engine `access_key:secret_key` as Seedream
 - **Key format:** `AKXXXXXXXX:secretXXXXXX`
 - **Where to get:** [console.volcengine.com](https://console.volcengine.com)
-- **Quirk:** Same HMAC signing as Seedream. Same credentials can be used if your account has both services enabled.
+- **Quirk:** Seedance falls back to the Seedream Keychain entry when no separate seedance entry is set, since both run on Volcengine ARK with shared credentials. If you only have one Volcengine key, storing it under `pushing-creation:seedream` covers both providers.
 
 ### Imagen
+
+> **Status: scaffolded, unverified — requires Vertex AI auth, deferred to v0.3.x**
+>
+> The provider code exists and is reachable via `--provider imagen`, but Vertex AI authentication is out of scope for v0.3.0. If no Vertex token is available, the CLI will exit with a clear error pointing to `docs/IMAGEN_VERTEX_SETUP.md` (coming in v0.3.x).
 
 - **Keychain service:** `pushing-creation:imagen`
 - **Image model:** `imagegeneration@006` (Vertex AI)
