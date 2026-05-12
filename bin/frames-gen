@@ -104,23 +104,22 @@ def main():
         return
 
     # Key lookup — seedance falls back to seedream (shared Volcengine credentials)
-    service = f"pushing-creation:{args.provider}"
-    api_key = keychain.get(service)
+    api_key = keychain.get_key(args.provider)
     if api_key is None and args.provider == "seedance":
-        api_key = keychain.get("pushing-creation:seedream")
+        api_key = keychain.get_key("seedream")
     if api_key is None:
         if args.provider == "imagen":
             print(
-                f"error: no key found in Keychain for '{service}'\n"
+                f"error: no key found in Keychain for '{args.provider}'\n"
                 f"Imagen requires Vertex AI authentication (deferred to v0.3.x).\n"
                 f"See docs/IMAGEN_VERTEX_SETUP.md for setup instructions.",
                 file=sys.stderr,
             )
         else:
             print(
-                f"error: no key found in Keychain for '{service}'\n"
+                f"error: no key found in Keychain for '{args.provider}'\n"
                 f"Add it with:\n"
-                f"  security add-generic-password -U -s \"{service}\" -a \"$USER\" -w \"<your-key>\"",
+                f"  frames-keys add {args.provider}",
                 file=sys.stderr,
             )
         sys.exit(2)

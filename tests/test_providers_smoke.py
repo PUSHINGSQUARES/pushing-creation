@@ -41,8 +41,7 @@ def _req(provider_name: str, kind: str) -> GenRequest:
 
 
 def _get_key(provider_name: str):
-    service = f"pushing-creation:{provider_name}"
-    return keychain.get(service)
+    return keychain.get_key(provider_name)
 
 
 @pytest.mark.parametrize("provider_name", ["gemini", "openai", "openrouter", "imagen"])

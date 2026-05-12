@@ -12,43 +12,38 @@ from lib import keychain
 from lib import scrub as scrub_mod
 from lib.providers import REGISTRY, get_provider
 
-_SERVICE_PREFIX = "pushing-creation:"
-
 
 def cmd_add(provider: str):
-    service = f"{_SERVICE_PREFIX}{provider}"
-    print(f"Adding key for {provider} ({service})")
+    print(f"Adding key for {provider} (com.shadow.control / apiKey_{provider})")
     print("Paste your API key and press Enter (input is hidden):")
     value = getpass.getpass(prompt="")
     if not value.strip():
         print("error: empty key — aborted", file=sys.stderr)
         sys.exit(1)
     try:
-        keychain.set(service, value.strip())
+        keychain.set_key(provider, value.strip())
     except Exception as e:
         print(f"error: {scrub_mod.scrub(str(e))}", file=sys.stderr)
         sys.exit(1)
-    print(f"[ok] {provider} — key stored in Keychain as '{service}'")
+    print(f"[ok] {provider} — key stored in Keychain")
     print("Verify with: frames-keys test " + provider)
 
 
 def cmd_list():
-    services = keychain.list_services(_SERVICE_PREFIX)
-    if not services:
+    providers = keychain.list_providers()
+    if not providers:
         print("No pushing-creation keys found in Keychain.")
         print("Add one with: frames-keys add <provider>")
         return
-    print("Keychain entries (service names only — no values shown):")
-    for svc in services:
-        name = svc.removeprefix(_SERVICE_PREFIX)
+    print("Provider keys in Keychain (names only — no values shown):")
+    for name in providers:
         tag = "(not in provider registry)" if name not in REGISTRY else ""
-        print(f"  {svc}  {tag}")
+        print(f"  {name}  {tag}")
 
 
 def cmd_test(provider: str):
-    service = f"{_SERVICE_PREFIX}{provider}"
-    if not keychain.has(service):
-        print(f"[fail] {provider}: no key in Keychain for '{service}'")
+    if not keychain.has_key(provider):
+        print(f"[fail] {provider}: no key in Keychain")
         print(f"  Add with: frames-keys add {provider}")
         sys.exit(1)
 
@@ -58,10 +53,10 @@ def cmd_test(provider: str):
         print(f"[fail] {provider}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    api_key = keychain.get(service)
+    api_key = keychain.get_key(provider)
     # seedance shares Volcengine credentials with seedream
     if api_key is None and provider == "seedance":
-        api_key = keychain.get("pushing-creation:seedream")
+        api_key = keychain.get_key("seedream")
     if api_key is None:
         print(f"[fail] {provider}: key read returned empty", file=sys.stderr)
         sys.exit(1)
@@ -83,21 +78,16 @@ def cmd_test(provider: str):
 
 
 def cmd_remove(provider: str):
-    service = f"{_SERVICE_PREFIX}{provider}"
-    if not keychain.has(service):
-        print(f"No key found for '{service}' — nothing to remove.")
+    if not keychain.has_key(provider):
+        print(f"No key found for '{provider}' — nothing to remove.")
         return
-    import subprocess
-    result = subprocess.run(
-        ["security", "delete-generic-password", "-s", service],
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode == 0:
-        print(f"[ok] Removed '{service}' from Keychain.")
-    else:
-        err = result.stderr.decode(errors="replace").strip()
-        print(f"error: {scrub_mod.scrub(err)}", file=sys.stderr)
+    removed = keychain.remove_key(provider)
+    if removed["primary"]:
+        print(f"[ok] Removed primary key (com.shadow.control / apiKey_{provider}) from Keychain.")
+    if removed["fallback"]:
+        print(f"[ok] Removed legacy key (pushing-creation:{provider}) from Keychain.")
+    if not removed["primary"] and not removed["fallback"]:
+        print(f"error: failed to remove key for '{provider}'", file=sys.stderr)
         sys.exit(1)
 
 
