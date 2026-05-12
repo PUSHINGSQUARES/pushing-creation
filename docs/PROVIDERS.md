@@ -60,20 +60,20 @@ pushing-creation supports direct generation through these providers.
 - **Keychain service:** `com.shadow.control` / `apiKey_seedream` (primary); `pushing-creation:seedream` (legacy fallback)
 - **Image model:** `seedream-v3`
 - **Video:** Not supported. Use seedance for video.
-- **Auth:** Volcano Engine `access_key:secret_key` (HMAC-SHA256 signed)
-- **Key format:** Store as `AKXXXXXXXX:secretXXXXXX` (colon-separated)
-- **Where to get:** [console.volcengine.com](https://console.volcengine.com) under Access Control
-- **Quirk:** Bytedance request signing requires timestamp-based HMAC. Key is two parts separated by colon.
+- **Auth:** Byteplus Model Ark API key (single string)
+- **Key format:** Single API key string from Byteplus console
+- **Where to get:** [byteplus.com](https://www.byteplus.com/en) under Access Control
+- **Quirk:** Key is a UUID-format API key, not an HMAC access/secret pair. Endpoint and auth scheme TBD — provider scaffolded pending API verification.
 
 ### Seedance
 
 - **Keychain service:** `com.shadow.control` / `apiKey_seedance` (primary); `pushing-creation:seedance` (legacy fallback)
 - **Video model:** `seedance-v1-lite`
 - **Image:** Not supported. Use seedream for images.
-- **Auth:** Same Volcano Engine `access_key:secret_key` as Seedream
-- **Key format:** `AKXXXXXXXX:secretXXXXXX`
-- **Where to get:** [console.volcengine.com](https://console.volcengine.com)
-- **Quirk:** Seedance falls back to the Seedream Keychain entry when no separate seedance entry is set, since both run on Volcengine ARK with shared credentials. If you only have one Volcengine key, storing it under `pushing-creation:seedream` covers both providers.
+- **Auth:** Same Byteplus Model Ark API key as Seedream
+- **Key format:** Single API key string
+- **Where to get:** [byteplus.com](https://www.byteplus.com/en)
+- **Quirk:** Seedance falls back to the Seedream Keychain entry when no separate seedance entry is set. If you only have one key, storing it under `pushing-creation:seedream` covers both providers.
 
 ### Imagen
 

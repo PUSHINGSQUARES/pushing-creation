@@ -51,8 +51,8 @@ Get your Gemini key at [aistudio.google.com/apikey](https://aistudio.google.com/
 | openai | `sk-...` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | openrouter | `sk-or-v1-...` | [openrouter.ai/keys](https://openrouter.ai/keys) |
 | kling | `AKXXXXXXXX:secretXXXXXX` | [klingai.com](https://klingai.com) under API settings |
-| seedream | `access_key:secret_key` | [console.volcengine.com](https://console.volcengine.com) under Access Control |
-| seedance | Same Volcano Engine credentials as seedream | Same as above |
+| seedream | API key (single string, Byteplus Model Ark) | [byteplus.com](https://www.byteplus.com/en) under Access Control |
+| seedance | Same key as seedream | Same as above |
 | imagen | `project-id:ya29.XXXXXXXX` | [cloud.google.com/vertex-ai](https://cloud.google.com/vertex-ai) (access token expires after 1h) |
 
 ## Verifying a key
