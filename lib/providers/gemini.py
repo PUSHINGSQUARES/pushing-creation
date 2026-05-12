@@ -77,32 +77,33 @@ class GeminiProvider(Provider):
 
     def generate_video(self, req: GenRequest, api_key: str) -> GenResult:
         t0 = time.monotonic()
-        ar_map = {"16:9": "16:9", "9:16": "9:16", "1:1": "1:1"}
+        # Veo 2 only supports 16:9 and 9:16
+        ar_map = {"16:9": "16:9", "9:16": "9:16"}
         aspect = ar_map.get(req.aspect_ratio, "16:9")
         payload = {
-            "model": _VIDEO_MODEL,
-            "prompt": req.prompt,
-            "config": {"aspectRatio": aspect, "numberOfVideos": 1},
+            "instances": [{"prompt": req.prompt}],
+            "parameters": {"aspectRatio": aspect, "sampleCount": 1, "durationSeconds": 5},
         }
         resp = _api("models/veo-2.0-generate-001:predictLongRunning", payload, api_key)
         operation_name = resp.get("name", "")
         if not operation_name:
             raise RuntimeError(f"No operation name in Veo response: {scrub(str(resp))}")
 
-        # Poll until done
+        # Poll using the full operation path
         for _ in range(120):
-            time.sleep(5)
-            status = _api(f"operations/{operation_name.split('/')[-1]}", {}, api_key)
+            time.sleep(10)
+            status = _api(operation_name, None, api_key)
             if status.get("done"):
                 break
         else:
-            raise RuntimeError("Veo generation timed out after 10 minutes")
+            raise RuntimeError("Veo generation timed out after 20 minutes")
 
         error = status.get("error")
         if error:
             raise RuntimeError(f"Veo error: {scrub(str(error))}")
 
-        videos = (status.get("response") or {}).get("generatedSamples", [])
+        gen_resp = status.get("response", {})
+        videos = gen_resp.get("generateVideoResponse", {}).get("generatedSamples", [])
         if not videos:
             raise RuntimeError(f"No video in Veo response: {scrub(str(status))}")
 
@@ -110,8 +111,11 @@ class GeminiProvider(Provider):
         if not video_uri:
             raise RuntimeError("No video URI in Veo response")
 
-        # Download video
-        dl_req = urllib.request.Request(f"{video_uri}&key={api_key}")
+        sep = "&" if "?" in video_uri else "?"
+        dl_req = urllib.request.Request(
+            f"{video_uri}{sep}key={api_key}",
+            headers={"Accept": "video/mp4"},
+        )
         out = req.out_path.with_suffix(".mp4")
         out.parent.mkdir(parents=True, exist_ok=True)
         with urllib.request.urlopen(dl_req, timeout=300) as resp_dl:

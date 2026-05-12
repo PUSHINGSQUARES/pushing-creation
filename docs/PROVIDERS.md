@@ -6,13 +6,13 @@ pushing-creation supports direct generation through these providers.
 
 | Provider | Image | Video | Verified | Notes |
 |----------|-------|-------|----------|-------|
-| gemini | yes | yes | ✓ verified 2026-05-08 (image) | Gemini 2.5 Flash image via Google AI Studio |
-| openai | yes | no | ✓ verified 2026-05-08 | GPT-image-1; no video support |
-| openrouter | yes | no | scaffolded, unverified — model availability varies by plan | Pass-through; default model requires account with image tier |
-| kling | no | yes | ✓ verified 2026-05-08 | Kling v2 Master video; JWT signed with HMAC-SHA256 |
-| seedream | yes | no | scaffolded, unverified — ARK API key format mismatch | Stored key is ARK UUID; provider expects Volcengine HMAC. Deferred to v0.3.x. |
-| seedance | no | yes | scaffolded, unverified — ARK API key format mismatch | Same as seedream; deferred to v0.3.x. |
-| imagen | yes | no | scaffolded, unverified — requires Vertex AI auth, deferred to v0.3.x | Google Imagen 006 via Vertex AI |
+| gemini | yes | yes | ✓ verified 2026-05-12 (image + video) | Gemini 2.5 Flash image + Veo 2 video via Google AI Studio |
+| openai | yes | no | ✓ verified 2026-05-12 | GPT-image-1; no video support |
+| openrouter | yes | no | ✓ verified 2026-05-12 | Default model updated to google/gemini-2.5-flash-image; flux-1.1-pro removed from OpenRouter |
+| kling | no | yes | ✓ verified 2026-05-12 | Kling v2 Master video; JWT signed with HMAC-SHA256 |
+| seedream | yes | no | scaffolded, unverified — API endpoint unknown for stored key format | Key is a 36-char UUID; ARK API (ark.cn-beijing.volces.com) rejects it. Correct endpoint/auth needed. |
+| seedance | no | yes | scaffolded, unverified — same as seedream | Shares key with seedream; same endpoint resolution needed. |
+| imagen | yes | no | scaffolded, unverified — no Keychain entry, requires Vertex AI auth | Set up with bin/frames-keys add imagen once a key is available. |
 
 ## Provider details
 

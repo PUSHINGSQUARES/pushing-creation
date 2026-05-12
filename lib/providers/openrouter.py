@@ -11,7 +11,7 @@ from .base import Provider, GenRequest, GenResult
 from ..scrub import scrub
 
 _BASE = "https://openrouter.ai/api/v1"
-_DEFAULT_IMAGE_MODEL = "black-forest-labs/flux-1.1-pro"
+_DEFAULT_IMAGE_MODEL = "google/gemini-2.5-flash-image"
 
 
 def _api(path: str, payload: dict, api_key: str) -> dict:
@@ -68,27 +68,39 @@ class OpenRouterProvider(Provider):
             "messages": [{"role": "user", "content": prompt}],
         }
         resp = _api("chat/completions", payload, api_key)
-        content = (resp.get("choices") or [{}])[0].get("message", {}).get("content", "")
+        msg = (resp.get("choices") or [{}])[0].get("message", {})
+        content = msg.get("content", "")
+        images = msg.get("images") or []
 
-        # OpenRouter may return an image URL or base64 in the content
         out = req.out_path.with_suffix(".png")
         out.parent.mkdir(parents=True, exist_ok=True)
 
-        if isinstance(content, list):
-            # Multimodal content
+        def _save_img_url(url_str: str) -> None:
+            if url_str.startswith("data:"):
+                _, b64 = url_str.split(",", 1)
+                out.write_bytes(base64.b64decode(b64))
+            else:
+                with urllib.request.urlopen(url_str, timeout=120) as dl:
+                    out.write_bytes(dl.read())
+
+        # Some models return images in the dedicated 'images' field
+        if images:
+            first = images[0]
+            if isinstance(first, dict) and first.get("type") == "image_url":
+                _save_img_url(first["image_url"]["url"])
+            elif isinstance(first, str):
+                _save_img_url(first)
+            else:
+                raise RuntimeError(f"Unexpected OpenRouter images format: {scrub(str(first)[:200])}")
+        elif isinstance(content, list):
             for part in content:
                 if isinstance(part, dict) and part.get("type") == "image_url":
-                    img_url = part["image_url"].get("url", "")
-                    if img_url.startswith("data:"):
-                        _, b64 = img_url.split(",", 1)
-                        out.write_bytes(base64.b64decode(b64))
-                    else:
-                        with urllib.request.urlopen(img_url, timeout=120) as dl:
-                            out.write_bytes(dl.read())
+                    _save_img_url(part["image_url"].get("url", ""))
                     break
+            else:
+                raise RuntimeError(f"No image_url part in OpenRouter content list")
         elif isinstance(content, str) and content.startswith("http"):
-            with urllib.request.urlopen(content.strip(), timeout=120) as dl:
-                out.write_bytes(dl.read())
+            _save_img_url(content.strip())
         else:
             raise RuntimeError(f"Unexpected OpenRouter response format: {scrub(str(content)[:200])}")
 

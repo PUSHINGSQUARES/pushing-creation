@@ -18,3 +18,5 @@
 - macOS only. Linux/Windows secret backends planned.
 - Stdlib-only Python 3.9+. No pip install required for end users.
 - Tests require pytest (development dep, not user-facing).
+- `imagen` provider scaffolded but not yet wired to a live key. Set up with `bin/frames-keys add imagen` once a Google Imagen key is available.
+- `seedream` and `seedance` providers scaffolded. Keys stored in Keychain are UUID-format; correct API endpoint unconfirmed. Deferred to v0.3.x once endpoint is resolved.

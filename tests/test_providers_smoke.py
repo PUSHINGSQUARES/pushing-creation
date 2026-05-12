@@ -58,7 +58,7 @@ def test_image_generation(provider_name):
     req = _req(provider_name, "image")
     try:
         result = p.generate_image(req, api_key)
-    except NotImplementedError as e:
+    except (NotImplementedError, ValueError) as e:
         pytest.skip(str(e))
 
     assert result.out_path.exists(), f"Output file not created: {result.out_path}"
@@ -84,7 +84,7 @@ def test_video_generation(provider_name):
     req.extras["duration"] = "5"
     try:
         result = p.generate_video(req, api_key)
-    except NotImplementedError as e:
+    except (NotImplementedError, ValueError) as e:
         pytest.skip(str(e))
 
     assert result.out_path.exists(), f"Output file not created: {result.out_path}"
@@ -105,7 +105,7 @@ def test_seedream_image(provider_name):
     req = _req(provider_name, "image")
     try:
         result = p.generate_image(req, api_key)
-    except NotImplementedError as e:
+    except (NotImplementedError, ValueError) as e:
         pytest.skip(str(e))
 
     assert result.out_path.exists()

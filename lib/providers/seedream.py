@@ -154,10 +154,14 @@ class SeedreamProvider(Provider):
     def ping(self, api_key: str) -> bool:
         try:
             access_key, secret_key = _parse_key(api_key)
-            # Smallest possible query: list models or check status
+        except ValueError as e:
+            raise NotImplementedError(
+                f"Seedream ping requires access_key:secret_key format -- "
+                f"key format not yet resolved for this Keychain entry: {e}"
+            ) from e
+        try:
             payload = {"req_key": "seedream_v3_i2i", "prompt": "test", "return_url": True}
             resp = _post(access_key, secret_key, payload)
-            # Any non-auth error is still a working key
             err = (resp.get("ResponseMetadata") or {}).get("Error") or {}
             code = err.get("Code", "")
             return "Auth" not in code and "InvalidKey" not in code
