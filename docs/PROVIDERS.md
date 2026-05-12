@@ -6,19 +6,19 @@ pushing-creation supports direct generation through these providers.
 
 | Provider | Image | Video | Verified | Notes |
 |----------|-------|-------|----------|-------|
-| gemini | yes | yes | ✓ verified 2026-05-08 (image) | Gemini 2.5 Flash image via Google AI Studio |
-| openai | yes | no | ✓ verified 2026-05-08 | GPT-image-1; no video support |
-| openrouter | yes | no | scaffolded, unverified — model availability varies by plan | Pass-through; default model requires account with image tier |
-| kling | no | yes | ✓ verified 2026-05-08 | Kling v2 Master video; JWT signed with HMAC-SHA256 |
-| seedream | yes | no | scaffolded, unverified — ARK API key format mismatch | Stored key is ARK UUID; provider expects Volcengine HMAC. Deferred to v0.3.x. |
-| seedance | no | yes | scaffolded, unverified — ARK API key format mismatch | Same as seedream; deferred to v0.3.x. |
-| imagen | yes | no | scaffolded, unverified — requires Vertex AI auth, deferred to v0.3.x | Google Imagen 006 via Vertex AI |
+| gemini | yes | yes | ✓ verified 2026-05-12 (image + video) | Key resolves via primary scheme (com.shadow.control). Gemini 2.5 Flash image + Veo 2 video. |
+| openai | yes | no | ✓ verified 2026-05-12 | Key resolves via primary scheme. GPT-image-1; no video support. |
+| openrouter | yes | no | ✓ verified 2026-05-12 | Key resolves via legacy fallback (pushing-creation:openrouter). |
+| kling | no | yes | ✓ verified 2026-05-12 | Key resolves via legacy fallback (pushing-creation:kling). JWT signed with HMAC-SHA256. |
+| seedream | yes | no | scaffolded, unverified — key resolves via primary, API endpoint unknown | Key is a 36-char UUID; ARK API (ark.cn-beijing.volces.com) rejects it. Correct endpoint/auth needed. |
+| seedance | no | yes | scaffolded, unverified — same as seedream | Shares key with seedream; same endpoint resolution needed. |
+| imagen | yes | no | scaffolded, unverified — no Keychain entry, requires Vertex AI auth | Set up with bin/frames-keys add imagen once a key is available. |
 
 ## Provider details
 
 ### Gemini
 
-- **Keychain service:** `pushing-creation:gemini`
+- **Keychain service:** `com.shadow.control` / `apiKey_gemini` (primary); `pushing-creation:gemini` (legacy fallback)
 - **Image model:** `gemini-2.5-flash-image`
 - **Video model:** `veo-2.0-generate-001`
 - **Cost:** Image approximately $0.002 per image; Veo video approximately $0.05-0.30 per second
@@ -27,7 +27,7 @@ pushing-creation supports direct generation through these providers.
 
 ### OpenAI
 
-- **Keychain service:** `pushing-creation:openai`
+- **Keychain service:** `com.shadow.control` / `apiKey_openai` (primary); `pushing-creation:openai` (legacy fallback)
 - **Image model:** `gpt-image-1`
 - **Video:** Not supported
 - **Cost:** Approximately $0.02-0.04 per image depending on size
@@ -36,7 +36,7 @@ pushing-creation supports direct generation through these providers.
 
 ### OpenRouter
 
-- **Keychain service:** `pushing-creation:openrouter`
+- **Keychain service:** `com.shadow.control` / `apiKey_openrouter` (primary); `pushing-creation:openrouter` (legacy fallback)
 - **Default image model:** `black-forest-labs/flux-1.1-pro`
 - **Video:** Not supported
 - **Cost:** Varies by underlying model; check [openrouter.ai/models](https://openrouter.ai/models)
@@ -46,7 +46,7 @@ pushing-creation supports direct generation through these providers.
 
 ### Kling
 
-- **Keychain service:** `pushing-creation:kling`
+- **Keychain service:** `com.shadow.control` / `apiKey_kling` (primary); `pushing-creation:kling` (legacy fallback)
 - **Video model:** `kling-v2-master`
 - **Image:** Not supported
 - **Cost:** Approximately $0.14 per 5-second clip (varies by tier)
@@ -57,7 +57,7 @@ pushing-creation supports direct generation through these providers.
 
 ### Seedream
 
-- **Keychain service:** `pushing-creation:seedream`
+- **Keychain service:** `com.shadow.control` / `apiKey_seedream` (primary); `pushing-creation:seedream` (legacy fallback)
 - **Image model:** `seedream-v3`
 - **Video:** Not supported. Use seedance for video.
 - **Auth:** Volcano Engine `access_key:secret_key` (HMAC-SHA256 signed)
@@ -67,7 +67,7 @@ pushing-creation supports direct generation through these providers.
 
 ### Seedance
 
-- **Keychain service:** `pushing-creation:seedance`
+- **Keychain service:** `com.shadow.control` / `apiKey_seedance` (primary); `pushing-creation:seedance` (legacy fallback)
 - **Video model:** `seedance-v1-lite`
 - **Image:** Not supported. Use seedream for images.
 - **Auth:** Same Volcano Engine `access_key:secret_key` as Seedream
@@ -81,7 +81,7 @@ pushing-creation supports direct generation through these providers.
 >
 > The provider code exists and is reachable via `--provider imagen`, but Vertex AI authentication is out of scope for v0.3.0. If no Vertex token is available, the CLI will exit with a clear error pointing to `docs/IMAGEN_VERTEX_SETUP.md` (coming in v0.3.x).
 
-- **Keychain service:** `pushing-creation:imagen`
+- **Keychain service:** `com.shadow.control` / `apiKey_imagen` (primary); `pushing-creation:imagen` (legacy fallback)
 - **Image model:** `imagegeneration@006` (Vertex AI)
 - **Video:** Not supported. Use gemini provider for Veo video.
 - **Auth:** GCP project ID + Vertex AI access token

@@ -138,6 +138,9 @@ class SeedanceProvider(Provider):
     def ping(self, api_key: str) -> bool:
         try:
             _parse_key(api_key)
-            return True  # if key parses, consider it configured
-        except Exception:
-            return False
+        except ValueError as e:
+            raise NotImplementedError(
+                f"Seedance ping requires access_key:secret_key format -- "
+                f"key format not yet resolved for this Keychain entry: {e}"
+            ) from e
+        return True
